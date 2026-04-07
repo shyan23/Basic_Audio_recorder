@@ -1,0 +1,2 @@
+-keep class com.soundtag.app.** { *; }
+-dontwarn kotlinx.serialization.**

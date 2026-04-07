@@ -1,0 +1,27 @@
+# Gradle
+.gradle/
+/build/
+**/build/
+
+# Android Studio
+.idea/
+*.iml
+*.hprof
+
+# Local configuration
+local.properties
+
+# Kotlin
+*.kotlin_module
+
+# Generated files
+.cxx/
+.externalNativeBuild/
+
+# IntelliJ
+out/
+
+# Mac
+.DS_Store
+soundtag_android_blueprint(1).html
+/.remember/
