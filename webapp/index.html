@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <title>SoundTag</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-tag">// soundtag · web</div>
+    <h1><span>Sound</span>Tag</h1>
+    <p>Record audio with GPS metadata. Files download as <code>.webm</code> + <code>.json</code> sidecar — ready for ML pipelines.</p>
+  </header>
+
+  <!-- ── Device name bar ────────────────────────────────────────────── -->
+  <div class="device-bar">
+    <span class="device-label">Device</span>
+    <span class="device-name" id="device-name">—</span>
+    <button class="device-edit-btn" id="device-edit-btn">edit</button>
+  </div>
+
+  <!-- ── Main ───────────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Permissions card (hidden once granted) -->
+    <div class="perm-card" id="perm-card" style="display:none">
+      <div class="perm-card-title">Microphone access needed</div>
+      <div class="perm-card-desc">
+        SoundTag needs your microphone to record. Location access is optional — recordings work without GPS, the coordinates field will be <code>null</code>.
+      </div>
+      <button class="perm-grant-btn" id="perm-grant-btn">Grant microphone access</button>
+    </div>
+
+    <!-- Error bar -->
+    <div class="error-bar" id="error-bar"></div>
+
+    <!-- Record button -->
+    <div class="record-wrap">
+      <div class="record-ring" id="record-ring"></div>
+      <button class="record-btn" id="record-btn" disabled>
+        <div class="record-btn-icon" id="record-icon"></div>
+        <span class="record-btn-label" id="record-label">Record</span>
+      </button>
+    </div>
+
+    <!-- Status -->
+    <div class="status">
+      <div class="status-timer" id="timer">00:00</div>
+      <div class="status-text" id="status-text">Ready to record</div>
+      <div class="status-coords" id="coords" style="display:none">
+        <span>LAT <span id="lat">—</span></span>
+        <span>LNG <span id="lng">—</span></span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Toast ──────────────────────────────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ── Save dialog ────────────────────────────────────────────────── -->
+  <div class="overlay" id="save-overlay">
+    <div class="modal">
+      <div class="modal-title">Save recording</div>
+      <div class="modal-desc">
+        Enter a filename prefix. The label is extracted from the prefix before the first <code>_</code> or digit.<br>
+        Two files will download: <code>.webm</code> audio + <code>.json</code> sidecar.
+      </div>
+      <input
+        class="modal-input"
+        id="filename-input"
+        type="text"
+        placeholder="traffic_001"
+        spellcheck="false"
+        autocomplete="off"
+      />
+      <div class="modal-hint">e.g. traffic_001 → label: "traffic"</div>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="save-cancel">Cancel</button>
+        <button class="btn-primary" id="save-confirm">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Device name dialog ─────────────────────────────────────────── -->
+  <div class="overlay" id="device-overlay">
+    <div class="modal">
+      <div class="modal-title">Set device name</div>
+      <div class="modal-desc">
+        This name is stored in your browser and included in every recording's JSON metadata. It identifies which device made the recording — no account needed.
+      </div>
+      <input
+        class="modal-input"
+        id="device-input"
+        type="text"
+        placeholder="e.g. Redmi Note 12"
+        spellcheck="false"
+        autocomplete="off"
+      />
+      <div class="modal-actions">
+        <button class="btn-ghost" id="device-cancel">Cancel</button>
+        <button class="btn-primary" id="device-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

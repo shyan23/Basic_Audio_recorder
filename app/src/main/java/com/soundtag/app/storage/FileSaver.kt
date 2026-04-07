@@ -11,15 +11,24 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 object FileSaver {
+
+    /**
+     * Saves [audioFile] (temp cache file) to Music/SoundTag/ with [desiredName],
+     * then writes a [metadataJson] sidecar alongside it.
+     *
+     * Returns the saved audio [Uri] on success, null if the audio save failed.
+     * The sidecar failure is non-fatal — audio is still returned.
+     * The temp [audioFile] is always deleted after a successful audio save.
+     */
     suspend fun saveRecording(
         context: Context,
         audioFile: File,
         desiredName: String,
         metadataJson: String
     ): Uri? = withContext(Dispatchers.IO) {
-        val baseName = desiredName.removeSuffix(".m4a")
+        val baseName  = desiredName.removeSuffix(".m4a")
         val audioName = "$baseName.m4a"
-        val jsonName = "$baseName.json"
+        val jsonName  = "$baseName.json"
 
         val audioUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             saveAudioQ(context, audioFile, audioName)
@@ -27,18 +36,16 @@ object FileSaver {
             saveAudioLegacy(audioFile, audioName)
         }
 
-        if (audioUri == null) {
-            return@withContext null
-        }
+        if (audioUri == null) return@withContext null
 
-        val jsonSaved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        // Temp file is no longer needed once audio is persisted
+        audioFile.delete()
+
+        // Sidecar failure is non-fatal: log it but still return the audio URI
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             saveJsonQ(context, metadataJson, jsonName)
         } else {
-            saveJsonLegacy(context, metadataJson, jsonName)
-        }
-
-        if (jsonSaved) {
-            audioFile.delete()
+            saveJsonLegacy(metadataJson, jsonName)
         }
 
         audioUri
@@ -50,10 +57,8 @@ object FileSaver {
             put(MediaStore.Audio.Media.MIME_TYPE, "audio/mp4")
             put(MediaStore.Audio.Media.RELATIVE_PATH, "Music/SoundTag")
         }
-
         val uri = context.contentResolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values)
             ?: return null
-
         return if (copyToUri(source, uri, context)) uri else null
     }
 
@@ -63,10 +68,8 @@ object FileSaver {
             put(MediaStore.Files.FileColumns.MIME_TYPE, "application/json")
             put(MediaStore.Files.FileColumns.RELATIVE_PATH, "Music/SoundTag")
         }
-
         val uri = context.contentResolver.insert(MediaStore.Files.getContentUri("external"), values)
             ?: return false
-
         return context.contentResolver.openOutputStream(uri)?.use { output ->
             output.write(json.toByteArray())
             true
@@ -74,35 +77,43 @@ object FileSaver {
     }
 
     private fun saveAudioLegacy(source: File, displayName: String): Uri? {
-        val musicDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
-        val targetDirectory = File(musicDirectory, "SoundTag")
-        if (!targetDirectory.exists()) {
-            targetDirectory.mkdirs()
+        return try {
+            val dir = soundTagDir() ?: return null
+            val dest = File(dir, displayName)
+            source.copyTo(dest, overwrite = true)
+            android.net.Uri.fromFile(dest)
+        } catch (_: Exception) {
+            null
         }
-
-        val destination = File(targetDirectory, displayName)
-        source.copyTo(destination, overwrite = true)
-        return Uri.fromFile(destination)
     }
 
-    private fun saveJsonLegacy(context: Context, json: String, displayName: String): Boolean {
-        val musicDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC)
-        val targetDirectory = File(musicDirectory, "SoundTag")
-        if (!targetDirectory.exists()) {
-            targetDirectory.mkdirs()
+    private fun saveJsonLegacy(json: String, displayName: String): Boolean {
+        return try {
+            val dir = soundTagDir() ?: return false
+            File(dir, displayName).writeText(json)
+            true
+        } catch (_: Exception) {
+            false
         }
+    }
 
-        val jsonFile = File(targetDirectory, displayName)
-        jsonFile.writeText(json)
-        return true
+    private fun soundTagDir(): File? {
+        val dir = File(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
+            "SoundTag"
+        )
+        if (!dir.exists() && !dir.mkdirs()) return null
+        return dir
     }
 
     private fun copyToUri(source: File, uri: Uri, context: Context): Boolean {
-        return context.contentResolver.openOutputStream(uri)?.use { output ->
-            source.inputStream().use { input ->
-                input.copyTo(output)
-            }
-            true
-        } ?: false
+        return try {
+            context.contentResolver.openOutputStream(uri)?.use { output ->
+                source.inputStream().use { input -> input.copyTo(output) }
+                true
+            } ?: false
+        } catch (_: Exception) {
+            false
+        }
     }
 }
